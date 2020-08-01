@@ -35,7 +35,7 @@ all: check-style test dist
 ## Propagates plugin manifest information into the server/ and webapp/ folders.
 .PHONY: apply
 apply:
-	./build/bin/manifest apply
+	./build/bin/pluginctl manifest apply
 
 ## Runs eslint and golangci-lint
 .PHONY: check-style
@@ -124,7 +124,7 @@ dist:	apply server webapp bundle
 ## Builds and installs the plugin to a server.
 .PHONY: deploy
 deploy: dist
-	./build/bin/pluginctl deploy $(PLUGIN_ID) dist/$(BUNDLE_NAME)
+	./build/bin/pluginctl deploy dist/$(BUNDLE_NAME)
 
 ## Builds and installs the plugin to a server, updating the webapp automatically when changed.
 .PHONY: watch
@@ -138,7 +138,7 @@ endif
 ## Installs a previous built plugin with updated webpack assets to a server.
 .PHONY: deploy-from-watch
 deploy-from-watch: bundle
-	./build/bin/pluginctl deploy $(PLUGIN_ID) dist/$(BUNDLE_NAME)
+	./build/bin/pluginctl deploy dist/$(BUNDLE_NAME)
 
 ## Setup dlv for attaching, identifying the plugin PID for other targets.
 .PHONY: setup-attach
@@ -212,17 +212,17 @@ endif
 ## Disable the plugin.
 .PHONY: disable
 disable: detach
-	./build/bin/pluginctl disable $(PLUGIN_ID)
+	./build/bin/pluginctl disable
 
 ## Enable the plugin.
 .PHONY: enable
 enable:
-	./build/bin/pluginctl enable $(PLUGIN_ID)
+	./build/bin/pluginctl enable
 
 ## Reset the plugin, effectively disabling and re-enabling it on the server.
 .PHONY: reset
 reset: detach
-	./build/bin/pluginctl reset $(PLUGIN_ID)
+	./build/bin/pluginctl reset
 
 ## Kill all instances of the plugin, detaching any existing dlv instance.
 .PHONY: kill
@@ -233,6 +233,21 @@ kill: detach
 		echo "Killing plugin pid $$PID"; \
 		kill -9 $$PID; \
 	done; \
+
+## Bump to next patch version
+.PHONY: bump-version-major
+bump-version-major:
+	./build/bin/pluginctl bump-version major
+
+## Bump to next minor version
+.PHONY: bump-version-minor
+bump-version-minor:
+	./build/bin/pluginctl bump-version minor
+
+## Bump to next path version
+.PHONY: bump-version-patch
+bump-version-patch:
+	./build/bin/pluginctl bump-version patch
 
 ## Clean removes all build artifacts.
 .PHONY: clean

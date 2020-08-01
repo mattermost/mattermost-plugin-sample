@@ -2,56 +2,109 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
 
 	"github.com/mattermost/mattermost-server/v5/model"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 )
 
-const helpText = `
-Usage:
-    pluginctl deploy <plugin id> <bundle path>
-    pluginctl disable <plugin id>
-    pluginctl enable <plugin id>
-    pluginctl reset <plugin id>
-`
-
 func main() {
-	err := pluginctl()
-	if err != nil {
-		fmt.Printf("Failed: %s\n", err.Error())
-		fmt.Print(helpText)
+	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
 
-func pluginctl() error {
-	if len(os.Args) < 3 {
-		return errors.New("invalid number of arguments")
-	}
+var rootCmd = &cobra.Command{
+	Use: "pluginctl",
+}
 
-	client, err := getClient()
-	if err != nil {
-		return err
-	}
+func init() {
+	rootCmd.AddCommand(
+		deployCmd,
+		disableCmd,
+		enableCmd,
+		resetCmd,
+	)
+}
 
-	switch os.Args[1] {
-	case "deploy":
-		if len(os.Args) < 4 {
-			return errors.New("invalid number of arguments")
+var deployCmd = &cobra.Command{
+	Use:     "deploy",
+	Short:   "Deploy the plugin",
+	Example: "deploy dist/com.mattermost.plugin-starter-template-0.1.0.tar.gz",
+	Args:    cobra.ExactArgs(1),
+	RunE: func(command *cobra.Command, args []string) error {
+		m, err := findManifest()
+		if err != nil {
+			return errors.Wrap(err, "failed to find manifest")
 		}
-		return deploy(client, os.Args[2], os.Args[3])
-	case "disable":
-		return disablePlugin(client, os.Args[2])
-	case "enable":
-		return enablePlugin(client, os.Args[2])
-	case "reset":
-		return resetPlugin(client, os.Args[2])
-	default:
-		return errors.New("invalid second argument")
-	}
+
+		client, err := getClient()
+		if err != nil {
+			return err
+		}
+
+		return deploy(client, m.Id, args[0])
+	},
+}
+
+var disableCmd = &cobra.Command{
+	Use:   "disable",
+	Short: "Disable the plugin",
+	Args:  cobra.ExactArgs(0),
+	RunE: func(command *cobra.Command, args []string) error {
+		m, err := findManifest()
+		if err != nil {
+			return errors.Wrap(err, "failed to find manifest")
+		}
+
+		client, err := getClient()
+		if err != nil {
+			return err
+		}
+
+		return disablePlugin(client, m.Id)
+	},
+}
+
+var enableCmd = &cobra.Command{
+	Use:   "enable",
+	Short: "Enable the plugin",
+	Args:  cobra.ExactArgs(0),
+	RunE: func(command *cobra.Command, args []string) error {
+		m, err := findManifest()
+		if err != nil {
+			return errors.Wrap(err, "failed to find manifest")
+		}
+
+		client, err := getClient()
+		if err != nil {
+			return err
+		}
+
+		return enablePlugin(client, m.Id)
+	},
+}
+
+var resetCmd = &cobra.Command{
+	Use:   "reset",
+	Short: "Disable and enable the plugin",
+	Args:  cobra.ExactArgs(0),
+	RunE: func(command *cobra.Command, args []string) error {
+		m, err := findManifest()
+		if err != nil {
+			return errors.Wrap(err, "failed to find manifest")
+		}
+
+		client, err := getClient()
+		if err != nil {
+			return err
+		}
+
+		return resetPlugin(client, m.Id)
+	},
 }
 
 func getClient() (*model.Client4, error) {
