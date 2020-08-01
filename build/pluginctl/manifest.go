@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 
@@ -176,6 +177,35 @@ func dumpPluginID(manifest *model.Manifest) {
 // dumpPluginVersion writes the plugin version from the given manifest to standard out
 func dumpPluginVersion(manifest *model.Manifest) {
 	fmt.Printf("%s", manifest.Version)
+}
+
+// writeManifest writes a given manifest back to file
+func writeManifest(manifest *model.Manifest) error {
+	_, manifestFilePath, err := model.FindManifest(".")
+	if err != nil {
+		return errors.Wrap(err, "failed to find manifest in current working directory")
+	}
+
+	file, err := os.OpenFile(manifestFilePath, os.O_RDWR, 0644)
+	if err != nil {
+		return errors.Wrapf(err, "failed to open %s", manifestFilePath)
+	}
+	defer file.Close()
+
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		return err
+	}
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "    ")
+
+	err = encoder.Encode(manifest)
+	if err != nil && err != io.EOF {
+		return errors.Wrap(err, "failed to encode manifest into manifest file")
+	}
+
+	return nil
 }
 
 // applyManifest propagates the plugin_id into the server and webapp folders, as necessary

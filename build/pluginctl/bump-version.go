@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"os/exec"
+
 	"github.com/blang/semver/v4"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -76,10 +79,44 @@ func bumpVersion(mode string) error {
 	}
 
 	manifest.Version = newVersion.String()
+	err = writeManifest(manifest)
+	if err != nil {
+		return errors.Wrap(err, "failed to writing manifest after bumping version")
+	}
 
 	err = applyManifest(manifest)
 	if err != nil {
-		return errors.Wrap(err, "failed to write manifest after bumping version")
+		return errors.Wrap(err, "failed to applying manifest after bumping version")
+	}
+
+	files := []string{"plugin.json"}
+	if manifest.HasServer() {
+		files = append(files, "server/manifest.go")
+	}
+	if manifest.HasWebapp() {
+		files = append(files, "webapp/src/manifest.js")
+	}
+
+	branch := fmt.Sprintf("release_v%s", newVersion)
+
+	gitCommands := [][]string{
+		{"checkout", "master"},
+		{"pull"},
+		{"checkout", "-b", branch},
+		append([]string{"add"}, files...),
+		{"commit", "-m", fmt.Sprintf("Bump version to %s", newVersion)},
+		{"push", "--set-upstream", "origin", branch},
+		{"checkout", "master"},
+	}
+
+	for _, command := range gitCommands {
+		cmd := exec.Command("git", command...)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Print(string(out))
+			return err
+		}
+		fmt.Print(string(out))
 	}
 
 	return nil
