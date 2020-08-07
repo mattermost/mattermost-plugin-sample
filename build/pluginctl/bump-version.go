@@ -5,6 +5,7 @@ import (
 	"os/exec"
 
 	"github.com/blang/semver/v4"
+	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -97,11 +98,30 @@ func bumpVersion(mode string) error {
 		files = append(files, "webapp/src/manifest.js")
 	}
 
+	cmd := exec.Command("git", append([]string{"diff"}, files...)...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Print(string(out))
+		return err
+	}
+	fmt.Print(string(out))
+
+	prompt := promptui.Prompt{
+		Label:     "Does the diff look good",
+		IsConfirm: true,
+	}
+
+	result, err := prompt.Run()
+	if err != nil {
+		fmt.Println("Diff wasn't confirmed. Exiting.")
+		return nil
+	}
+
 	branch := fmt.Sprintf("release_v%s", newVersion)
 
 	gitCommands := [][]string{
-		{"checkout", "master"},
-		{"pull"},
+		//{"checkout", "master"},
+		//{"pull"},
 		{"checkout", "-b", branch},
 		append([]string{"add"}, files...),
 		{"commit", "-m", fmt.Sprintf("Bump version to %s", newVersion)},
