@@ -57,6 +57,7 @@ endif
 .PHONY: server
 server:
 ifneq ($(HAS_SERVER),)
+	$(info Are you sure you want to build the plugin with an id of "com.mattermost.plugin-starter-template"? Consider editing plugin.json to configure your project.)
 	mkdir -p server/dist;
 ifeq ($(MM_DEBUG),)
 	cd server && env GOOS=linux GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o dist/plugin-linux-amd64;
